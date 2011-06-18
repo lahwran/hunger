@@ -122,6 +122,7 @@ public class Main extends JavaPlugin{
         }
         
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.SyncDisk(this), 600, 600);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 200, 200);
         System.out.println("HungerAndSuch enabled");
     }
     public void onDisable()

@@ -3,6 +3,12 @@
  */
 package net.lahwran.bukkit.hungerandsuch;
 
+import java.util.Map.Entry;
+
+import net.lahwran.bukkit.hungerandsuch.Main.LastValue;
+
+import org.bukkit.entity.Player;
+
 /**
  * @author lahwran
  *
@@ -25,8 +31,17 @@ public class Jobs {
         public InformPlayersHunger(Main plugin){ super(plugin); }
         public void run()
         {
-            
-            
+            synchronized(plugin.lastfood)
+            {
+                for(Entry<Player, LastValue> e:plugin.lastfood.entrySet())
+                {
+                    Player p = e.getKey();
+                    LastValue v = e.getValue();
+                    long tickssince = v.world.getFullTime() - v.feedtick;
+                    float hunger = HungerTransforms.buildup(v.value, tickssince);
+                    p.sendMessage(Main.hungerbar(hunger, 40));
+                }
+            }
         }
     }
     public static class InformPlayersThirst extends Job implements Runnable
@@ -34,7 +49,6 @@ public class Jobs {
         public InformPlayersThirst(Main plugin){ super(plugin); }
         public void run()
         {
-            
             
         }
     }
