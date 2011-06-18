@@ -45,7 +45,9 @@ public class Main extends JavaPlugin{
     //these two contain every player we know about
     public HashMap<String,Float> allhungers = new HashMap<String,Float>();
     public HashMap<String,Float> allthirsts = new HashMap<String,Float>();
+    public HashMap<String,Long> soupcooldowns = new HashMap<String,Long>();
 
+    //used in hurter
     public HashMap<String,Integer> lasthungers = new HashMap<String,Integer>();
     public HashMap<String,Integer> lastthirsts = new HashMap<String,Integer>();
 
@@ -55,10 +57,10 @@ public class Main extends JavaPlugin{
 
     public Main()
     {
-        fooditems.add(260); //apple
-        fooditems.add(282); //mushroom soup + bowl - special behavior: should heal health some too, should leave bowl
+        fooditems.add(260); //apple - special behavior: should recharge both health and hunger partially
+        fooditems.add(282); //mushroom soup + bowl - special behavior: should heal health some too, should leave bowl - 5 minute cooldown between uses
         fooditems.add(297); //bread
-        fooditems.add(322); //golden apple - special behavior: should recharge both health and hunger
+        fooditems.add(322); //golden apple - special behavior: should recharge both health and hunger fully, possibly slow hunger?
         fooditems.add(357); //cookie
         
         fooditems.add(349); //raw fish
@@ -127,8 +129,8 @@ public class Main extends JavaPlugin{
         }
         
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.SyncDisk(this), 600, 600);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 200, 200);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 200, 200);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 12000, 12000);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 6000, 6000);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Hurter(this, 200), 200, 200);
         System.out.println("HungerAndSuch enabled");
     }

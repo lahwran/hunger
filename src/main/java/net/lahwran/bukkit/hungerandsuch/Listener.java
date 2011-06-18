@@ -1,5 +1,7 @@
 package net.lahwran.bukkit.hungerandsuch;
 
+import net.lahwran.bukkit.hungerandsuch.Main.TimeValue;
+
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -121,6 +123,26 @@ public class Listener extends PlayerListener
         }
     }
 
+    public void heal(Player player, int healamt)
+    {
+        player.setHealth(Math.min(player.getHealth()+healamt, 20));
+        
+    }
+
+    public void feed(Player player, int feedamt)
+    {
+        synchronized(plugin.lasteaten)
+        {
+            TimeValue last = plugin.lasteaten.get(player);
+            World world = player.getWorld();
+            long curtime = world.getFullTime();
+            long tickssince = (curtime-feedamt)-last.feedtick;
+            float newval = Math.max(HungerTransforms.buildup(last.value, tickssince), 0.0f);
+            TimeValue newtimeval = new TimeValue(curtime,world,newval);
+            plugin.lasteaten.put(player, newtimeval);
+        }
+    }
+
     public void onPlayerInteract(PlayerInteractEvent event)
     {
         System.out.println("--- Interact event ---");
@@ -131,15 +153,38 @@ public class Listener extends PlayerListener
         System.out.println("Material: "+str(event.getMaterial()));
         System.out.println("BlockInHand: "+str(event.isBlockInHand()));
         System.out.println("Cancelled: "+str(event.isCancelled()));
+        Player player = event.getPlayer();
+        long curtime = player.getWorld().getFullTime();
         if(event.hasItem() && (!event.isBlockInHand()) &&
            (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) &&
            plugin.fooditems.contains(event.getItem().getTypeId()))
         {
-            System.out.println("you just tried to eat food! I just tried to stop you.");
-            boolean eaten = false;
-            event.getPlayer().getWorld().getFullTime();
-            //if()
-            
+            int itemid = event.getItem().getTypeId();
+            ItemStack item = event.getItem();
+            if(itemid == 282)
+            {
+                //mushroom soup 
+                Long lastsoup = plugin.soupcooldowns.get(player.getName());
+                if(lastsoup == null || lastsoup < curtime-6000)
+                {
+                    
+                    item.setAmount(item.getAmount()-1);
+                    player.getInventory().addItem(new ItemStack(281));
+                    heal(player, 4);
+                    feed(player, 3600);
+                    plugin.soupcooldowns.put(player.getName(), curtime);
+                }
+                else
+                {
+                    int seconds = (int) (6000 - (curtime-lastsoup));
+                    String sseconds = ""+(seconds % 60)+" seconds.";
+                    int minutes = (seconds % 60);
+                    String sminutes = "";
+                    if(minutes > 0)
+                        sminutes = ""+minutes+" minutes, ";
+                    player.sendMessage(String.format("You have eaten soup too recently for this to affect you. Please wait %s%s", sminutes, sseconds));
+                }
+            }
             event.setUseItemInHand(Result.DENY);
         }
     }

@@ -80,7 +80,7 @@ public class Jobs {
                 {
                     Player p = e.getKey();
                     TimeValue v = e.getValue();
-                    Integer lasthealthdrop = plugin.lastthirsts.get(p.getName());
+                    Integer lasthealthdrop = plugin.lasthungers.get(p.getName());
                     long tickssince = v.world.getFullTime() - v.feedtick;
                     float curvalue = HungerTransforms.buildup(v.value, tickssince);
                     int curhealthdrop = HungerTransforms.healthdrop(curvalue);
