@@ -26,11 +26,11 @@ public class Main extends JavaPlugin{
 
     public final HashSet<Integer> fooditems = new HashSet<Integer>();
 
-    public static class LastValue {
+    public static class TimeValue {
         public final long feedtick;
         public final float value;
         public final World world;
-        public LastValue(long feedtick, World world, float value)
+        public TimeValue(long feedtick, World world, float value)
         {
             this.feedtick = feedtick;
             this.value = value;
@@ -39,12 +39,15 @@ public class Main extends JavaPlugin{
     }
 
     //these two contain players who are currently online
-    public final HashMap<Player,LastValue> lastfood = new HashMap<Player,LastValue>();
-    public final HashMap<Player,LastValue> lastwater = new HashMap<Player,LastValue>();
+    public HashMap<Player,TimeValue> lasteaten = new HashMap<Player,TimeValue>();
+    public HashMap<Player,TimeValue> lastdrink = new HashMap<Player,TimeValue>();
     
     //these two contain every player we know about
-    public final HashMap<String,Float> hungers = new HashMap<String,Float>();
-    public final HashMap<String,Float> thirsts = new HashMap<String,Float>();
+    public HashMap<String,Float> allhungers = new HashMap<String,Float>();
+    public HashMap<String,Float> allthirsts = new HashMap<String,Float>();
+
+    public HashMap<String,Integer> lasthungers = new HashMap<String,Integer>();
+    public HashMap<String,Integer> lastthirsts = new HashMap<String,Integer>();
 
     private File hungerfile;
 
@@ -81,8 +84,9 @@ public class Main extends JavaPlugin{
             while((curline = reader.readLine()) != null)
             {
                 String[] split = curline.split(" ");
-                if(split.length != 2) continue;
-                hungers.put(split[0], Float.parseFloat(split[1]));
+                if(split.length != 3) continue;
+                allhungers.put(split[0], Float.parseFloat(split[1]));
+                lasthungers.put(split[0], Integer.parseInt(split[2]));
             }
         }
         catch (FileNotFoundException e){}
@@ -105,8 +109,9 @@ public class Main extends JavaPlugin{
             while((curline = reader.readLine()) != null)
             {
                 String[] split = curline.split(" ");
-                if(split.length != 2) continue;
-                thirsts.put(split[0], Float.parseFloat(split[1]));
+                if(split.length != 3) continue;
+                allthirsts.put(split[0], Float.parseFloat(split[1]));
+                lastthirsts.put(split[0], Integer.parseInt(split[2]));
             }
         }
         catch (FileNotFoundException e){}
@@ -123,6 +128,8 @@ public class Main extends JavaPlugin{
         
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.SyncDisk(this), 600, 600);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 200, 200);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 200, 200);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Hurter(this, 200), 200, 200);
         System.out.println("HungerAndSuch enabled");
     }
     public void onDisable()
@@ -134,21 +141,32 @@ public class Main extends JavaPlugin{
 
     public synchronized void syncToDisk()
     {
-        boolean thirstchanged = false;
-        synchronized(thirsts)
+        boolean thirstchanged = syncThirst();
+        synchronized(allthirsts)
         {
             if(thirstchanged)
             {
                 try
                 {
                     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(thirstfile)));
-                    for(Entry<String,Float> e:thirsts.entrySet())
+                    for(Entry<String,Float> e:allthirsts.entrySet())
                     {
                         writer.append(e.getKey());
                         writer.append(" ");
                         writer.append(Float.toString(e.getValue()));
+                        writer.append(" ");
+                        Integer drop = lastthirsts.get(e.getKey());
+                        if(drop == null)
+                        {
+                            writer.append(""+ThirstTransforms.healthdrop(e.getValue()));
+                        }
+                        else
+                        {
+                            writer.append(drop.toString());
+                        }
                         writer.append("\n");
                     }
+                    writer.close();
                 }
                 catch (FileNotFoundException e1)
                 {
@@ -164,20 +182,31 @@ public class Main extends JavaPlugin{
         }
         
         boolean hungerchanged = syncHunger();
-        synchronized(hungers)
+        synchronized(allhungers)
         {
             if(hungerchanged)
             {
                 try
                 {
                     BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(hungerfile)));
-                    for(Entry<String,Float> e:hungers.entrySet())
+                    for(Entry<String,Float> e:allhungers.entrySet())
                     {
                         writer.append(e.getKey());
                         writer.append(" ");
                         writer.append(Float.toString(e.getValue()));
+                        writer.append(" ");
+                        Integer drop = lasthungers.get(e.getKey());
+                        if(drop == null)
+                        {
+                            writer.append(""+HungerTransforms.healthdrop(e.getValue()));
+                        }
+                        else
+                        {
+                            writer.append(drop.toString());
+                        }
                         writer.append("\n");
                     }
+                    writer.close();
                 }
                 catch (FileNotFoundException e1)
                 {
@@ -196,16 +225,16 @@ public class Main extends JavaPlugin{
     public boolean syncThirst()
     {
         boolean changed = false;
-        synchronized(thirsts)
+        synchronized(allthirsts)
         {
-            synchronized(lastwater)
+            synchronized(lastdrink)
             {
-                for(Entry<Player,LastValue> e:lastwater.entrySet())
+                for(Entry<Player,TimeValue> e:lastdrink.entrySet())
                 {
                     changed = true;
-                    LastValue val = e.getValue();
+                    TimeValue val = e.getValue();
                     float newval = ThirstTransforms.buildup(val.value, val.world.getFullTime()-val.feedtick);
-                    thirsts.put(e.getKey().getName(), newval);
+                    allthirsts.put(e.getKey().getName(), newval);
                 }
             }
         }
@@ -215,16 +244,16 @@ public class Main extends JavaPlugin{
     public boolean syncHunger()
     {
         boolean changed = false;
-        synchronized(hungers)
+        synchronized(allhungers)
         {
-            synchronized(lastfood)
+            synchronized(lasteaten)
             {
-                for(Entry<Player,LastValue> e:lastfood.entrySet())
+                for(Entry<Player,TimeValue> e:lasteaten.entrySet())
                 {
                     changed = true;
-                    LastValue val = e.getValue();
+                    TimeValue val = e.getValue();
                     float newval = HungerTransforms.buildup(val.value, val.world.getFullTime()-val.feedtick);
-                    hungers.put(e.getKey().getName(), newval);
+                    allhungers.put(e.getKey().getName(), newval);
                 }
             }
         }
@@ -234,16 +263,16 @@ public class Main extends JavaPlugin{
     public static String hungerbar(float hunger, int length)
     {
         float fillamt = 1f - ((float)Math.pow(hunger, 0.5f));
-        return bar(fillamt, length, 0.154846f, 0.4f, 0.7f);
+        return bar(fillamt, length, 0.154846f, 0.4f, 0.7f, false);
     }
 
     public static String thirstbar(float thirst, int length)
     {
         float fillamt = 1f - ((float)Math.pow(thirst, 0.6f));
-        return bar(fillamt, length, 0.1f, 0.3402f,0.6f);
+        return bar(fillamt, length, 0.1f, 0.3402f,0.6f, true);
     }
 
-    public static String bar(float fillamt, int length, float fbad, float fmed, float fgood)
+    public static String bar(float fillamt, int length, float fbad, float fmed, float fgood, boolean blue)
     {
         String full = "=";
         String empty = "-";
@@ -255,6 +284,8 @@ public class Main extends JavaPlugin{
         String darkred = "§4";
         String black = "§0";
         String grey = "§7";
+        String aqua = "§b";
+        String darkblue = "§1";
         
         StringBuilder bar = new StringBuilder(white);
         bar.append("[");
@@ -266,10 +297,15 @@ public class Main extends JavaPlugin{
         for(int i=0; i<length; i++)
         {
             if (i==fullchars) bar.append(grey);
-            else if (i==1) bar.append(darkred);
-            else if (i==bad) bar.append(red);
-            else if (i==med) bar.append(yellow);
-            else if (i==good) bar.append(green);
+            else if(i<fullchars)
+            {
+                if (i==1) bar.append(darkred);
+                else if (i==bad) bar.append(red);
+                else if (i==med && blue) bar.append(darkblue);
+                else if (i==med) bar.append(yellow);
+                else if (i==good && blue) bar.append(aqua);
+                else if (i==good) bar.append(green);
+            }
             bar.append(i<fullchars ? full : empty);
         }
         bar.append(white);

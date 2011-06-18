@@ -48,18 +48,18 @@ public class Listener extends PlayerListener
         World world = player.getWorld();
         long jointime = world.getFullTime();
         float hungervalue = 0.0f;
-        if(plugin.hungers.containsKey(player.getName()))
+        if(plugin.allhungers.containsKey(player.getName()))
         {
-            hungervalue = plugin.hungers.get(player.getName());
+            hungervalue = plugin.allhungers.get(player.getName());
         }
-        plugin.lastfood.put(player, new Main.LastValue(jointime, world, hungervalue));
+        plugin.lasteaten.put(player, new Main.TimeValue(jointime, world, hungervalue));
         
         float thirstvalue = 0.0f;
-        if(plugin.thirsts.containsKey(player.getName()))
+        if(plugin.allthirsts.containsKey(player.getName()))
         {
-            thirstvalue = plugin.thirsts.get(player.getName());
+            thirstvalue = plugin.allthirsts.get(player.getName());
         }
-        plugin.lastwater.put(player, new Main.LastValue(jointime, world, thirstvalue));
+        plugin.lastdrink.put(player, new Main.TimeValue(jointime, world, thirstvalue));
         plugin.syncToDisk();
         
     }
@@ -69,18 +69,18 @@ public class Listener extends PlayerListener
         Player player = event.getPlayer();
         
         plugin.syncToDisk();
-        synchronized(plugin.lastfood)
+        synchronized(plugin.lasteaten)
         {
-            if(plugin.lastfood.containsKey(player))
+            if(plugin.lasteaten.containsKey(player))
             {
-                plugin.lastfood.remove(player);
+                plugin.lasteaten.remove(player);
             }
         }
-        synchronized(plugin.lastwater)
+        synchronized(plugin.lastdrink)
         {
-            if(plugin.lastwater.containsKey(player))
+            if(plugin.lastdrink.containsKey(player))
             {
-                plugin.lastwater.remove(player);
+                plugin.lastdrink.remove(player);
             }
         }
     }
@@ -95,27 +95,27 @@ public class Listener extends PlayerListener
             
             Player player = event.getPlayer();
             
-            synchronized(plugin.lastfood)
+            synchronized(plugin.lasteaten)
             {
-                Main.LastValue prevhunger = plugin.lastfood.get(player);
+                Main.TimeValue prevhunger = plugin.lasteaten.get(player);
                 float newhunger = 0.0f;
                 if (prevhunger != null)
                 {
                     
                     newhunger = HungerTransforms.buildup(prevhunger.value, prevhunger.world.getFullTime()-prevhunger.feedtick);
                 }
-                plugin.lastfood.put(player, new Main.LastValue(newtime, toworld, newhunger));
+                plugin.lasteaten.put(player, new Main.TimeValue(newtime, toworld, newhunger));
             }
             
-            synchronized(plugin.lastwater)
+            synchronized(plugin.lastdrink)
             {
-                Main.LastValue prevthirst = plugin.lastwater.get(player);
+                Main.TimeValue prevthirst = plugin.lastdrink.get(player);
                 float newthirst = 0.0f;
                 if (prevthirst != null)
                 {
                     newthirst = ThirstTransforms.buildup(prevthirst.value, prevthirst.world.getFullTime()-prevthirst.feedtick);
                 }
-                plugin.lastwater.put(player, new Main.LastValue(newtime, toworld, newthirst));
+                plugin.lastdrink.put(player, new Main.TimeValue(newtime, toworld, newthirst));
             }
             plugin.syncToDisk();
         }
