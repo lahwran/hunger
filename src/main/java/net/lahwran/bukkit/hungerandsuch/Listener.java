@@ -168,21 +168,21 @@ public class Listener extends PlayerListener
                 if(lastsoup == null || lastsoup < curtime-6000)
                 {
                     
-                    item.setAmount(item.getAmount()-1);
-                    player.getInventory().addItem(new ItemStack(281));
+                    item.setTypeId(281);
                     heal(player, 4);
                     feed(player, 3600);
+                    player.sendMessage("You feel slightly less hungry! that should do for a little while.");
                     plugin.soupcooldowns.put(player.getName(), curtime);
                 }
                 else
                 {
-                    int seconds = (int) (6000 - (curtime-lastsoup));
+                    int seconds = (int) ((6000 - (curtime-lastsoup))/20);
                     String sseconds = ""+(seconds % 60)+" seconds.";
-                    int minutes = (seconds % 60);
+                    int minutes = (seconds / 60);
                     String sminutes = "";
                     if(minutes > 0)
                         sminutes = ""+minutes+" minutes, ";
-                    player.sendMessage(String.format("You have eaten soup too recently for this to affect you. Please wait %s%s", sminutes, sseconds));
+                    player.sendMessage(String.format("You have eaten soup too recently for this to affect you. Wait %s%s", sminutes, sseconds));
                 }
             }
             event.setUseItemInHand(Result.DENY);
