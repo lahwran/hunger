@@ -1,0 +1,27 @@
+<?xml version="1.0" standalone="no" ?>
+<!DOCTYPE project PUBLIC "-//audacityproject-1.3.0//DTD//EN" "http://audacity.sourceforge.net/xml/audacityproject-1.3.0.dtd" >
+<project xmlns="http://audacity.sourceforge.net/xml/" projname="hunger sequence_data" version="1.3.0" audacityversion="1.3.12-beta" sel0="0.0000000000" sel1="21.0000000000" vpos="0" h="0.0000000000" zoom="332.1904761904" rate="44100">
+	<tags>
+		<tag name="id3v2" value="1"/>
+	</tags>
+	<import filename="Audio Track.ogg" offset="0.00000000" mute="0" solo="0" height="150" minimized="0" gain="1" pan="0"/>
+	<labeltrack name="Label Track" numlabels="17" height="123" minimized="0">
+		<label t="0.00000000" t1="0.07500000" title="completely"/>
+		<label t="0.00000000" t1="0.25000000" title="full"/>
+		<label t="0.07500000" t1="0.20056264" title="feeling"/>
+		<label t="0.20056264" t1="0.40639335" title="slightly"/>
+		<label t="0.25000000" t1="1.50000000" title="hungry"/>
+		<label t="0.40639335" t1="1.00544725" title="feeling"/>
+		<label t="1.00544725" t1="1.50000000" title="very"/>
+		<label t="1.50000000" t1="1.79716170" title="getting"/>
+		<label t="1.50000000" t1="4.00000000" title="weak"/>
+		<label t="1.79716170" t1="2.09819381" title="feeling"/>
+		<label t="2.09819381" t1="3.00129014" title="very"/>
+		<label t="3.00129014" t1="4.00000000" title="unbearably"/>
+		<label t="4.00000000" t1="9.00000000" title="famished"/>
+		<label t="6.43004587" t1="9.00000000" title="unbearably"/>
+		<label t="9.00000000" t1="17.00000000" title="starving"/>
+		<label t="14.00401376" t1="17.00000000" title="deathly"/>
+		<label t="17.00000000" t1="21.00000000" title="dying of hunger"/>
+	</labeltrack>
+</project>
