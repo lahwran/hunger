@@ -314,4 +314,9 @@ public class Main extends JavaPlugin{
         bar.append("]");
         return bar.toString();
     }
+
+    public static String hungerstatus(float hunger)
+    {
+        
+    }
 }
