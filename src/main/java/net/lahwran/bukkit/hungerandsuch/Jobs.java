@@ -39,7 +39,7 @@ public class Jobs {
                     TimeValue v = e.getValue();
                     long tickssince = v.world.getFullTime() - v.feedtick;
                     float hunger = HungerTransforms.buildup(v.value, tickssince);
-                    p.sendMessage(Main.hungerbar(hunger, 40));
+                    p.sendMessage(Main.hungerstatus(hunger));
                 }
             }
         }
@@ -74,7 +74,7 @@ public class Jobs {
         }
         public void run()
         {
-            synchronized(plugin.lasthungers){
+            /*synchronized(plugin.lasthungers){
             synchronized(plugin.lasteaten){
                 for(Entry<Player, TimeValue> e:plugin.lasteaten.entrySet())
                 {
@@ -95,7 +95,7 @@ public class Jobs {
                     System.out.println("Hunger for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
                     plugin.lasthungers.put(p.getName(), curhealthdrop);
                 }
-            }}
+            }}*/
             synchronized(plugin.lastthirsts){
             synchronized(plugin.lastdrink){
                 for(Entry<Player, TimeValue> e:plugin.lastdrink.entrySet())

@@ -291,7 +291,6 @@ public class Main extends JavaPlugin{
         
         StringBuilder bar = new StringBuilder(white);
         bar.append("[");
-        bar.append(black);
         int fullchars = (int)Math.round(fillamt * length);
         int bad = (int)Math.round(fbad * length);
         int med = (int)Math.round(fmed * length);
@@ -301,12 +300,12 @@ public class Main extends JavaPlugin{
             if (i==fullchars) bar.append(grey);
             else if(i<fullchars)
             {
-                if (i==1) bar.append(darkred);
-                else if (i==bad) bar.append(red);
+                if (i==bad) bar.append(red);
                 else if (i==med && blue) bar.append(darkblue);
                 else if (i==med) bar.append(yellow);
                 else if (i==good && blue) bar.append(aqua);
                 else if (i==good) bar.append(green);
+                else if (i==0) bar.append(darkred);
             }
             bar.append(i<fullchars ? full : empty);
         }
@@ -317,6 +316,123 @@ public class Main extends JavaPlugin{
 
     public static String hungerstatus(float hunger)
     {
-        
+        float barval = 0.0f;
+        hunger *= 21.0f;
+        String result = "You are ";
+        final int barlen = 15;
+        if (hunger < 0.25) // full
+        {
+            if(hunger < 0.075) //completely full
+            {
+                result += "completely ";
+            }
+            else if(hunger < 0.2)
+            {
+                result += "feeling ";
+            }
+            else
+            {
+                result += "slightly ";
+            }
+            result += "full. ";
+            result += bar(1.0f - (hunger * 4f), barlen, 0f, 0.2f, 0.7f, false);
+        }
+        else if (hunger < 1.50) // hungry
+        {
+            if(hunger < 0.4)
+            {
+                result += "slightly ";
+            }
+            else if(hunger < 1.0)
+            {
+                result += "feeling ";
+            }
+            else
+            {
+                result += "very ";
+            }
+            result += "hungry. ";
+            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, false);
+        }
+        else if (hunger < 4.0)
+        {
+            if(hunger < 1.8)
+            {
+                result += "getting ";
+            }
+            else if(hunger < 2.1)
+            {
+                result += "feeling ";
+            }
+            else if(hunger < 3.0)
+            {
+                result += "very ";
+            }
+            else
+            {
+                result += "unbearably ";
+            }
+            result += "weak. ";
+            result += bar(1.0f - ((hunger-1.5f) * 0.4f), barlen, 0.4f, 0.76f, 0.88f, false);
+        }
+        else if (hunger < 9.0)
+        {
+            if (hunger > 6.5)
+            {
+                result += "unbearably ";
+            }
+            result += "famished. ";
+            result += bar(1.0f - ((hunger-4.0f) * 0.2f), barlen, 0.5f, -1f, -1f, false);
+        }
+        else if (hunger < 17.0)
+        {
+            if(hunger > 14.0)
+            {
+                result += "deathly ";
+            }
+            result += "starving. ";
+            result += bar(1.0f - ((hunger-9f) * 0.125f), barlen, 0.375f, -1f, -1f, false);
+        }
+        else
+        {
+            result += "dying of hunger. ";
+            result += bar(1.0f - ((hunger-17f) * 0.25f), barlen, -1f, -1f, -1f, false);
+        }
+        result += ".";
+        return result;
+    }
+    public static String thirststatus(float hunger)
+    {
+        float barval = 0.0f;
+        hunger *= 21.0f;
+        String result = "You are ";
+        final int barlen = 15;
+        if (hunger < 0.25) // full
+        {
+            result += "quenched. ";
+            result += bar(1.0f - (hunger * 4f), barlen, -1f, -1f, 0f, true);
+        }
+        else if (hunger < 0.65) // hungry
+        {
+            result += "thirsty. ";
+            result += bar(1.0f - ((hunger-0.25f) * 0.4f), barlen, 0f, 0.2f, 0.68f, true);
+        }
+        else if (hunger < 0.9) // hungry
+        {
+            result += "dehydrated. ";
+            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, true);
+        }
+        else if (hunger < 1.8) // hungry
+        {
+            result += "parched. ";
+            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, true);
+        }
+        else
+        {
+            result += "dying of thirst. ";
+            result += bar(1.0f - ((hunger-1.8f) * 0.83333f), barlen, -1f, -1f, -1f, true);
+        }
+        result += ".";
+        return result;
     }
 }
