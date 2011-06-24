@@ -36,10 +36,10 @@ public class Jobs {
                 for(Entry<Player, TimeValue> e:plugin.lasteaten.entrySet())
                 {
                     Player p = e.getKey();
+                    if (plugin.goldendeaths.contains(p.getName()))
+                        continue;
                     TimeValue v = e.getValue();
-                    long tickssince = v.world.getFullTime() - v.feedtick;
-                    float hunger = HungerTransforms.buildup(v.value, tickssince);
-                    p.sendMessage(Main.hungerstatus(hunger));
+                    Main.notifyhunger(p,v);
                 }
             }
         }
@@ -54,10 +54,10 @@ public class Jobs {
                 for(Entry<Player, TimeValue> e:plugin.lastdrink.entrySet())
                 {
                     Player p = e.getKey();
+                    if (plugin.goldendeaths.contains(p.getName()))
+                        continue;
                     TimeValue v = e.getValue();
-                    long tickssince = v.world.getFullTime() - v.feedtick;
-                    float thirst = ThirstTransforms.buildup(v.value, tickssince);
-                    p.sendMessage(Main.thirstbar(thirst, 40));
+                    Main.notifythirst(p, v);
                 }
             }
         }
@@ -74,11 +74,13 @@ public class Jobs {
         }
         public void run()
         {
-            /*synchronized(plugin.lasthungers){
+            synchronized(plugin.lasthungers){
             synchronized(plugin.lasteaten){
                 for(Entry<Player, TimeValue> e:plugin.lasteaten.entrySet())
                 {
                     Player p = e.getKey();
+                    if (plugin.goldendeaths.contains(p.getName()))
+                        continue;
                     TimeValue v = e.getValue();
                     Integer lasthealthdrop = plugin.lasthungers.get(p.getName());
                     long tickssince = v.world.getFullTime() - v.feedtick;
@@ -91,16 +93,19 @@ public class Jobs {
                     if (lasthealthdrop < curhealthdrop)
                     {
                         p.damage(curhealthdrop-lasthealthdrop);
+                        p.sendMessage("§bThe hunger hurts! find food!");
                     }
                     System.out.println("Hunger for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
                     plugin.lasthungers.put(p.getName(), curhealthdrop);
                 }
-            }}*/
+            }}
             synchronized(plugin.lastthirsts){
             synchronized(plugin.lastdrink){
                 for(Entry<Player, TimeValue> e:plugin.lastdrink.entrySet())
                 {
                     Player p = e.getKey();
+                    if (plugin.goldendeaths.contains(p.getName()))
+                        continue;
                     TimeValue v = e.getValue();
                     Integer lasthealthdrop = plugin.lastthirsts.get(p.getName());
                     long tickssince = v.world.getFullTime() - v.feedtick;
@@ -113,11 +118,51 @@ public class Jobs {
                     if (lasthealthdrop < curhealthdrop)
                     {
                         p.damage(curhealthdrop-lasthealthdrop);
+                        p.sendMessage("§bThe thirst hurts! find water!");
                     }
                     System.out.println("Thirst for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
                     plugin.lastthirsts.put(p.getName(), curhealthdrop);
                 }
             }}
+        }
+    }
+    public static class Healer extends Job implements Runnable
+    {
+        public Healer(Main plugin){ super(plugin); }
+        public void run()
+        {
+            synchronized(plugin.lastdrink){
+            synchronized(plugin.lasteaten){
+                for(Entry<Player, TimeValue> e:plugin.lasteaten.entrySet())
+                {
+                    Player player = e.getKey();
+                    TimeValue hungerv = e.getValue();
+                    TimeValue thirstv = plugin.lastdrink.get(player);
+                    float hunger = HungerTransforms.buildup(hungerv);
+                    float thirst = ThirstTransforms.buildup(thirstv);
+                    
+                    boolean toohungry = hunger >= 0.01190476;
+                    boolean toothirsty = thirst >= 0.083;
+                    int oldhealth = player.getHealth();
+                    
+                    if (plugin.goldendeaths.contains(player.getName()) || 
+                            (!toohungry && !toothirsty))
+                    {
+                        if (oldhealth >= 20) continue;
+                        player.setHealth(oldhealth+1);
+                        player.sendMessage("§bYou heal!");
+                    }
+                    else if (oldhealth < 20)
+                    {
+                        StringBuilder message = new StringBuilder("§bYou are hurt, but are ");
+                        if(toohungry) message.append("too hungry ");
+                        if(toohungry && toothirsty) message.append("and ");
+                        if(toothirsty) message.append("too thirsty ");
+                        message.append("to heal! Find food!");
+                    }
+                }
+            }}
+           
         }
     }
 }

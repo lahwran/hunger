@@ -1,7 +1,10 @@
 package net.lahwran.bukkit.hungerandsuch;
 
+import java.util.HashSet;
+
 import net.lahwran.bukkit.hungerandsuch.Main.TimeValue;
 
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -11,6 +14,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerListener;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -50,18 +54,34 @@ public class Listener extends PlayerListener
         World world = player.getWorld();
         long jointime = world.getFullTime();
         float hungervalue = 0.0f;
-        if(plugin.allhungers.containsKey(player.getName()))
+        synchronized(plugin.allhungers)
         {
-            hungervalue = plugin.allhungers.get(player.getName());
+            if(plugin.allhungers.containsKey(player.getName()))
+            {
+                hungervalue = plugin.allhungers.get(player.getName());
+            }
         }
-        plugin.lasteaten.put(player, new Main.TimeValue(jointime, world, hungervalue));
+        TimeValue val = new Main.TimeValue(jointime, world, hungervalue);
+        synchronized(plugin.lasteaten)
+        {
+            plugin.lasteaten.put(player, val);
+            Main.notifyhunger(player, val);
+        }
         
         float thirstvalue = 0.0f;
-        if(plugin.allthirsts.containsKey(player.getName()))
+        synchronized(plugin.allthirsts)
         {
-            thirstvalue = plugin.allthirsts.get(player.getName());
+            if(plugin.allthirsts.containsKey(player.getName()))
+            {
+                thirstvalue = plugin.allthirsts.get(player.getName());
+            }
         }
-        plugin.lastdrink.put(player, new Main.TimeValue(jointime, world, thirstvalue));
+        val = new Main.TimeValue(jointime, world, thirstvalue);
+        synchronized(plugin.lastdrink)
+        {
+            plugin.lastdrink.put(player, val);
+            Main.notifythirst(player, val);
+        }
         plugin.syncToDisk();
         
     }
@@ -123,13 +143,32 @@ public class Listener extends PlayerListener
         }
     }
 
+    public void onPlayerRespawn(PlayerRespawnEvent event)
+    {
+        Player player = event.getPlayer();
+        World world = event.getRespawnLocation().getWorld();
+        long curtime = world.getFullTime();
+        synchronized(plugin.lasteaten){
+        synchronized(plugin.lastdrink){
+            TimeValue value = new TimeValue(curtime, world, 0.0f);
+            plugin.lasteaten.put(player, value);
+            plugin.lastdrink.put(player, value);
+            Main.notifyhunger(player, value);
+            Main.notifythirst(player, value);
+        }}
+        synchronized(plugin.goldendeaths)
+        {
+            plugin.goldendeaths.remove(player.getName());
+        }
+    }
+
     public void heal(Player player, int healamt)
     {
         player.setHealth(Math.min(player.getHealth()+healamt, 20));
         
     }
 
-    public void feed(Player player, int feedamt)
+    public TimeValue feed(Player player, int feedamt)
     {
         synchronized(plugin.lasteaten)
         {
@@ -140,21 +179,47 @@ public class Listener extends PlayerListener
             float newval = Math.max(HungerTransforms.buildup(last.value, tickssince), 0.0f);
             TimeValue newtimeval = new TimeValue(curtime,world,newval);
             plugin.lasteaten.put(player, newtimeval);
+            return newtimeval;
+        }
+    }
+
+    public TimeValue hydrate(Player player, int hydrateamount) //lame name
+    {
+        synchronized(plugin.lastdrink)
+        {
+            TimeValue last = plugin.lastdrink.get(player);
+            World world = player.getWorld();
+            long curtime = world.getFullTime();
+            long tickssince = (curtime-hydrateamount)-last.feedtick;
+            float newval = Math.max(ThirstTransforms.buildup(last.value, tickssince), 0.0f);
+            TimeValue newtimeval = new TimeValue(curtime,world,newval);
+            plugin.lastdrink.put(player, newtimeval);
+            return newtimeval;
         }
     }
 
     public void onPlayerInteract(PlayerInteractEvent event)
     {
-        System.out.println("--- Interact event ---");
+        /*System.out.println("--- Interact event ---");
         System.out.println("Item: "+str(event.getItem()));
         System.out.println("Block: "+str(event.getClickedBlock()));
         System.out.println("BlockFace: "+str(event.getBlockFace()));
         System.out.println("Action: "+str(event.getAction()));
         System.out.println("Material: "+str(event.getMaterial()));
         System.out.println("BlockInHand: "+str(event.isBlockInHand()));
-        System.out.println("Cancelled: "+str(event.isCancelled()));
+        System.out.println("Cancelled: "+str(event.isCancelled()));*/
         Player player = event.getPlayer();
-        long curtime = player.getWorld().getFullTime();
+        World world = player.getWorld();
+        long curtime = world.getFullTime();
+        
+        HashSet<Byte> transparent = new HashSet<Byte>();
+        transparent.add((Byte)(byte)0);
+        Block targetblock = player.getTargetBlock(transparent, 2);
+        int targettype = -1;
+        if (targetblock != null)
+            targettype = targetblock.getTypeId();
+        
+        
         if(event.hasItem() && (!event.isBlockInHand()) &&
            (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) &&
            plugin.fooditems.contains(event.getItem().getTypeId()))
@@ -170,8 +235,8 @@ public class Listener extends PlayerListener
                     
                     item.setTypeId(281);
                     heal(player, 4);
-                    feed(player, 3600);
-                    player.sendMessage("You feel slightly less hungry! that should do for a little while.");
+                    player.sendMessage("You are feeling less hungry!");
+                    Main.notifyhunger(player, feed(player, 3600));
                     plugin.soupcooldowns.put(player.getName(), curtime);
                 }
                 else
@@ -182,10 +247,132 @@ public class Listener extends PlayerListener
                     String sminutes = "";
                     if(minutes > 0)
                         sminutes = ""+minutes+" minutes, ";
-                    player.sendMessage(String.format("You have eaten soup too recently for this to affect you. Wait %s%s", sminutes, sseconds));
+                    player.sendMessage(String.format("§bYou have eaten soup too recently for this to affect you. Wait %s%s", sminutes, sseconds));
                 }
             }
+            else if(itemid == 260)
+            {
+                heal(player, 8);
+                player.sendMessage("That was a good apple!");
+                Main.notifyhunger(player, feed(player, 96000));
+                player.getInventory().remove(item);
+            }
+            else if(itemid == 322)
+            {
+                heal(player, 20);
+                player.sendMessage("Your health is restored and §byou are free from hunger till death!");
+                synchronized(plugin.lasteaten)
+                {
+                    float newval = -20000000000f; //plenty of zeroes, yes?
+                    TimeValue newtimeval = new TimeValue(curtime,world,newval);
+                    plugin.lasteaten.put(player, newtimeval);
+                }
+                synchronized(plugin.goldendeaths)
+                {
+                    plugin.goldendeaths.add(player.getName());
+                }
+                player.getInventory().remove(item);
+            }
+            else if(itemid == 297)
+            {
+                //bread
+                player.sendMessage("You feel nourished.");
+                Main.notifyhunger(player, feed(player, 18000));
+            }
+            else if(itemid == 357)
+            {
+                //cookie
+                player.sendMessage("That was a yummy cookie!");
+                Main.notifyhunger(player, feed(player, 4000));
+            }
+            else if(itemid == 349)
+            {
+                //raw fish
+                player.sendMessage("That raw fish was gross. Maybe you should have cooked it in a furnace!");
+                Main.notifyhunger(player, feed(player, 8000));
+            }
+            else if(itemid == 350)
+            {
+                //cooked fish
+                player.sendMessage("The fish tastes bland but is filling.");
+                Main.notifyhunger(player, feed(player, 17000));
+            }
+            else if(itemid == 319)
+            {
+                //raw ham
+                player.sendMessage("That raw ham was gross. Maybe you should have cooked it in a furnace!");
+                Main.notifyhunger(player, feed(player, 8000));
+            }
+            else if(itemid == 320)
+            {
+                //cooked ham
+                player.sendMessage("The ham is sweet and filling!.");
+                Main.notifyhunger(player, feed(player, 20000));
+            }
             event.setUseItemInHand(Result.DENY);
+        }
+        else if(targettype == 8 || targettype == 9)
+        {
+            Long lastdrink = plugin.drinkcooldowns.get(player.getName());
+            if(lastdrink == null || lastdrink < curtime - 10)
+            {
+                int watercount = 0;
+                Location l = targetblock.getLocation();
+                int startx = l.getBlockX();
+                int starty = l.getBlockY();
+                int startz = l.getBlockZ();
+                for(int x=-2; x<=2; x++)
+                for(int z=-2; z<=2; z++)
+                {
+                    int b_id = world.getBlockAt(startx + x, starty, startz+z).getTypeId();
+                    if(b_id == 8 || b_id == 9)
+                        watercount++;
+                }
+                if (event.hasItem() && !event.isBlockInHand() && 
+                  (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) &&
+                   event.getItem().getTypeId() == 281)
+                {
+                    //we have a bowl
+                    if(watercount > 3)
+                    {
+                        TimeValue t = hydrate(player, 1500);
+                        player.sendMessage("You drink from bowl. "+Main.thirststatus(t.value));
+                    }
+                    else
+                    {
+                        player.sendMessage("There is not enough water here to drink from.");
+                    }
+                }
+                else if (!event.hasItem())
+                {
+                    if(watercount > 7)
+                    {
+                        TimeValue t = hydrate(player, 500);
+                        player.sendMessage("You drink with hands. "+Main.thirststatus(t.value));
+                    }
+                    else
+                    {
+                        player.sendMessage("There is not enough water here to drink with your hands. Try drinking with a bowl.");
+                    }
+                }
+                else
+                {
+                    player.sendMessage("You can't drink from pools with that item. Try your hands or a bowl.");
+                }
+                plugin.drinkcooldowns.put(player.getName(), curtime);
+            }
+            else
+            {
+                player.sendMessage("§bYou can't drink that fast!");
+            }
+        }
+        if(event.hasItem() && event.getAction() == Action.RIGHT_CLICK_AIR && 
+                event.getItem().getTypeId() == 326)
+        {
+            ItemStack item = event.getItem();
+            item.setTypeId(325);
+            TimeValue t = hydrate(player, 20000);
+            player.sendMessage("You drink from bucket. "+Main.thirststatus(t.value));
         }
     }
 }

@@ -45,15 +45,21 @@ public class Main extends JavaPlugin{
     //these two contain every player we know about
     public HashMap<String,Float> allhungers = new HashMap<String,Float>();
     public HashMap<String,Float> allthirsts = new HashMap<String,Float>();
+    
     public HashMap<String,Long> soupcooldowns = new HashMap<String,Long>();
+    public HashMap<String,Long> drinkcooldowns = new HashMap<String,Long>();
 
     //used in hurter
     public HashMap<String,Integer> lasthungers = new HashMap<String,Integer>();
     public HashMap<String,Integer> lastthirsts = new HashMap<String,Integer>();
 
+    public HashSet<String> goldendeaths = new HashSet<String>();
+
     private File hungerfile;
 
     private File thirstfile;
+
+    private File goldenapplesfile;
 
     public Main()
     {
@@ -72,9 +78,10 @@ public class Main extends JavaPlugin{
     public void onEnable() {
         PluginManager pm = getServer().getPluginManager();
         pm.registerEvent(Event.Type.PLAYER_INTERACT, listener, Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_JOIN, listener, Priority.Normal, this);
+        pm.registerEvent(Event.Type.PLAYER_JOIN, listener, Priority.Monitor, this);
         pm.registerEvent(Event.Type.PLAYER_TELEPORT, listener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_QUIT, listener, Priority.Normal, this);
+        pm.registerEvent(Event.Type.PLAYER_RESPAWN, listener, Priority.Monitor, this);
         File datadir = this.getDataFolder();
         if (!datadir.exists())
             datadir.mkdirs();
@@ -128,10 +135,34 @@ public class Main extends JavaPlugin{
             e.printStackTrace();
         }
         
+        goldenapplesfile = new File(this.getDataFolder(),"goldenapples");
+        try
+        {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(goldenapplesfile)));
+            String curline;
+            while((curline = reader.readLine()) != null)
+            {
+                if(curline.length() <= 0) continue;
+                goldendeaths.add(curline);
+            }
+        }
+        catch (FileNotFoundException e){}
+        catch (NumberFormatException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.SyncDisk(this), 600, 600);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 200, 200);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 200, 200);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 12000, 12000);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 6000, 6000);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Hurter(this, 200), 200, 200);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Healer(this), 2000, 6000);
         System.out.println("HungerAndSuch enabled");
     }
     public void onDisable()
@@ -220,6 +251,31 @@ public class Main extends JavaPlugin{
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
+            }
+        }
+        synchronized(goldendeaths)
+        {
+            try
+            {
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(goldenapplesfile)));
+                boolean notfirst = false;
+                for(String p:goldendeaths)
+                {
+                    if(notfirst) writer.append("\n");
+                    writer.append(p);
+                    notfirst=true;
+                }
+                writer.close();
+            }
+            catch (FileNotFoundException e1)
+            {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            catch (IOException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
         }
     }
@@ -316,28 +372,27 @@ public class Main extends JavaPlugin{
 
     public static String hungerstatus(float hunger)
     {
-        float barval = 0.0f;
         hunger *= 21.0f;
         String result = "You are ";
         final int barlen = 15;
-        if (hunger < 0.25) // full
+        if (hunger < 0.25)
         {
-            if(hunger < 0.075) //completely full
+            if(hunger < 0.075)
             {
                 result += "completely ";
             }
             else if(hunger < 0.2)
             {
-                result += "feeling ";
+                //result += "feeling ";
             }
             else
             {
                 result += "slightly ";
             }
             result += "full. ";
-            result += bar(1.0f - (hunger * 4f), barlen, 0f, 0.2f, 0.7f, false);
+            result += bar(1.0f - (hunger * 4f), barlen, -1f, -1f, 0f, false);
         }
-        else if (hunger < 1.50) // hungry
+        else if (hunger < 1.50)
         {
             if(hunger < 0.4)
             {
@@ -345,14 +400,14 @@ public class Main extends JavaPlugin{
             }
             else if(hunger < 1.0)
             {
-                result += "feeling ";
+                //result += "feeling ";
             }
             else
             {
                 result += "very ";
             }
             result += "hungry. ";
-            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, false);
+            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, -1f, -1f, 0f, false);
         }
         else if (hunger < 4.0)
         {
@@ -362,7 +417,7 @@ public class Main extends JavaPlugin{
             }
             else if(hunger < 2.1)
             {
-                result += "feeling ";
+                //result += "feeling ";
             }
             else if(hunger < 3.0)
             {
@@ -373,7 +428,7 @@ public class Main extends JavaPlugin{
                 result += "unbearably ";
             }
             result += "weak. ";
-            result += bar(1.0f - ((hunger-1.5f) * 0.4f), barlen, 0.4f, 0.76f, 0.88f, false);
+            result += bar(1.0f - ((hunger-1.5f) * 0.4f), barlen, -1f, 0f, 0.4f, false);
         }
         else if (hunger < 9.0)
         {
@@ -382,7 +437,7 @@ public class Main extends JavaPlugin{
                 result += "unbearably ";
             }
             result += "famished. ";
-            result += bar(1.0f - ((hunger-4.0f) * 0.2f), barlen, 0.5f, -1f, -1f, false);
+            result += bar(1.0f - ((hunger-4.0f) * 0.2f), barlen, 0f, 0.5f, -1f, false);
         }
         else if (hunger < 17.0)
         {
@@ -398,41 +453,58 @@ public class Main extends JavaPlugin{
             result += "dying of hunger. ";
             result += bar(1.0f - ((hunger-17f) * 0.25f), barlen, -1f, -1f, -1f, false);
         }
-        result += ".";
         return result;
     }
-    public static String thirststatus(float hunger)
+    public static String thirststatus(float thirst)
     {
         float barval = 0.0f;
-        hunger *= 21.0f;
+        thirst *= 3.0f;
         String result = "You are ";
         final int barlen = 15;
-        if (hunger < 0.25) // full
+        if (thirst < 0.25)
         {
             result += "quenched. ";
-            result += bar(1.0f - (hunger * 4f), barlen, -1f, -1f, 0f, true);
+            result += bar(1.0f - (thirst * 4f), barlen, -1f, -1f, 0f, true);
         }
-        else if (hunger < 0.65) // hungry
+        else if (thirst < 0.65) 
         {
             result += "thirsty. ";
-            result += bar(1.0f - ((hunger-0.25f) * 0.4f), barlen, 0f, 0.2f, 0.68f, true);
+            result += bar(1.0f - ((thirst-0.25f) * 2.5f), barlen, -1f, 0f, -1f, true);
         }
-        else if (hunger < 0.9) // hungry
+        else if (thirst < 0.9)
         {
             result += "dehydrated. ";
-            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, true);
+            result += bar(1.0f - ((thirst-0.65f) * 4f), barlen, 0f, -1f, -1f, true);
         }
-        else if (hunger < 1.8) // hungry
+        else if (thirst < 1.8)
         {
             result += "parched. ";
-            result += bar(1.0f - ((hunger-0.25f) * 0.8f), barlen, 0f, 0.2f, 0.68f, true);
+            result += bar(1.0f - ((thirst-0.9f) / 0.9f), barlen, -1f, -1f, -1f, true);
         }
         else
         {
             result += "dying of thirst. ";
-            result += bar(1.0f - ((hunger-1.8f) * 0.83333f), barlen, -1f, -1f, -1f, true);
+            result += bar(1.0f - ((thirst-1.8f) / 1.2f), barlen, -1f, -1f, -1f, true);
         }
-        result += ".";
         return result;
+    }
+    public static void notifythirst(Player p, TimeValue v)
+    {
+        long tickssince = v.world.getFullTime() - v.feedtick;
+        float thirst = ThirstTransforms.buildup(v.value, tickssince);
+        p.sendMessage("§b["+strtime(v.world.getTime())+"] "+Main.thirststatus(thirst));
+    }
+    public static void notifyhunger(Player p, TimeValue v)
+    {
+        long tickssince = v.world.getFullTime() - v.feedtick;
+        float hunger = HungerTransforms.buildup(v.value, tickssince);
+        p.sendMessage("§b["+strtime(v.world.getTime())+"] "+Main.hungerstatus(hunger));
+    }
+    public static String strtime(long time) {
+        int hours = (int) ((time / 1000 + 8) % 24);
+        int minutes = (int) (60 * (time % 1000) / 1000);
+        return String.format("%d:%02d %s",
+                (hours % 12) == 0 ? 12 : hours % 12, minutes,
+                hours < 12 ? "am" : "pm");
     }
 }
