@@ -12,7 +12,7 @@ import net.lahwran.bukkit.hungerandsuch.Main.TimeValue;
 public class ThirstTransforms {
     public static final float buildup(float oldvalue, long tickssince)
     {
-        return oldvalue + (((float)tickssince)/(72000f));
+        return oldvalue + (((float)tickssince)/(144000f));
     }
     public static int healthdrop(float curvalue)
     {

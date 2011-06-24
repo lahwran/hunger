@@ -7,6 +7,9 @@ import net.lahwran.bukkit.hungerandsuch.Main.TimeValue;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event.Result;
 import org.bukkit.event.block.Action;
@@ -18,7 +21,7 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 
-public class Listener extends PlayerListener
+public class Listener extends PlayerListener implements CommandExecutor
 {
 
     public final Main plugin;
@@ -170,6 +173,7 @@ public class Listener extends PlayerListener
 
     public TimeValue feed(Player player, int feedamt)
     {
+        feedamt *= 2;
         synchronized(plugin.lasteaten)
         {
             TimeValue last = plugin.lasteaten.get(player);
@@ -185,6 +189,7 @@ public class Listener extends PlayerListener
 
     public TimeValue hydrate(Player player, int hydrateamount) //lame name
     {
+        hydrateamount *= 2;
         synchronized(plugin.lastdrink)
         {
             TimeValue last = plugin.lastdrink.get(player);
@@ -196,6 +201,18 @@ public class Listener extends PlayerListener
             plugin.lastdrink.put(player, newtimeval);
             return newtimeval;
         }
+    }
+    
+    public void subtract(Player player, ItemStack item, int amount)
+    {
+        if(item.getAmount() - amount <= 0)
+            player.getInventory().removeItem(item);
+        else
+            item.setAmount(item.getAmount() - amount);
+    }
+    public void subtract(Player player, ItemStack item)
+    {
+        subtract(player, item, 1);
     }
 
     public void onPlayerInteract(PlayerInteractEvent event)
@@ -230,7 +247,7 @@ public class Listener extends PlayerListener
             {
                 //mushroom soup 
                 Long lastsoup = plugin.soupcooldowns.get(player.getName());
-                if(lastsoup == null || lastsoup < curtime-6000)
+                if(lastsoup == null || lastsoup < curtime-2000)
                 {
                     
                     item.setTypeId(281);
@@ -241,7 +258,7 @@ public class Listener extends PlayerListener
                 }
                 else
                 {
-                    int seconds = (int) ((6000 - (curtime-lastsoup))/20);
+                    int seconds = (int) ((2000 - (curtime-lastsoup))/20);
                     String sseconds = ""+(seconds % 60)+" seconds.";
                     int minutes = (seconds / 60);
                     String sminutes = "";
@@ -255,7 +272,7 @@ public class Listener extends PlayerListener
                 heal(player, 8);
                 player.sendMessage("That was a good apple!");
                 Main.notifyhunger(player, feed(player, 96000));
-                player.getInventory().remove(item);
+                subtract(player, item);
             }
             else if(itemid == 322)
             {
@@ -271,43 +288,49 @@ public class Listener extends PlayerListener
                 {
                     plugin.goldendeaths.add(player.getName());
                 }
-                player.getInventory().remove(item);
+                subtract(player, item);
             }
             else if(itemid == 297)
             {
                 //bread
                 player.sendMessage("You feel nourished.");
                 Main.notifyhunger(player, feed(player, 18000));
+                subtract(player, item);
             }
             else if(itemid == 357)
             {
                 //cookie
                 player.sendMessage("That was a yummy cookie!");
                 Main.notifyhunger(player, feed(player, 4000));
+                subtract(player, item);
             }
             else if(itemid == 349)
             {
                 //raw fish
                 player.sendMessage("That raw fish was gross. Maybe you should have cooked it in a furnace!");
                 Main.notifyhunger(player, feed(player, 8000));
+                subtract(player, item);
             }
             else if(itemid == 350)
             {
                 //cooked fish
                 player.sendMessage("The fish tastes bland but is filling.");
                 Main.notifyhunger(player, feed(player, 17000));
+                subtract(player, item);
             }
             else if(itemid == 319)
             {
                 //raw ham
                 player.sendMessage("That raw ham was gross. Maybe you should have cooked it in a furnace!");
                 Main.notifyhunger(player, feed(player, 8000));
+                subtract(player, item);
             }
             else if(itemid == 320)
             {
                 //cooked ham
                 player.sendMessage("The ham is sweet and filling!.");
                 Main.notifyhunger(player, feed(player, 20000));
+                subtract(player, item);
             }
             event.setUseItemInHand(Result.DENY);
         }
@@ -343,7 +366,8 @@ public class Listener extends PlayerListener
                         player.sendMessage("There is not enough water here to drink from.");
                     }
                 }
-                else if (!event.hasItem())
+                else if (!event.hasItem()&& 
+                        (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR))
                 {
                     if(watercount > 7)
                     {
@@ -354,6 +378,10 @@ public class Listener extends PlayerListener
                     {
                         player.sendMessage("There is not enough water here to drink with your hands. Try drinking with a bowl.");
                     }
+                }
+                else if (event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.LEFT_CLICK_AIR)
+                {
+                    player.sendMessage("You can't drink by punching!");
                 }
                 else
                 {
@@ -374,5 +402,18 @@ public class Listener extends PlayerListener
             TimeValue t = hydrate(player, 20000);
             player.sendMessage("You drink from bucket. "+Main.thirststatus(t.value));
         }
+        //if(event.hasBlock() && event.getAction() == Action.RIGHT_CLICK_BLOCK && event.getClickedBlock().getTypeId() == )
+    }
+
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
+    {
+        if(!(sender instanceof Player))
+        {
+            sender.sendMessage("You're not a player, the commands aren't smart enough to help you at the moment");
+        }
+        Player player = (Player)sender;
+        Main.notifyhunger(player, plugin.lasteaten.get(player));
+        Main.notifythirst(player, plugin.lastdrink.get(player));
+        return true;
     }
 }

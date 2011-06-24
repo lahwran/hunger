@@ -73,6 +73,8 @@ public class Main extends JavaPlugin{
         fooditems.add(350); //cooked fish
         fooditems.add(319); //raw pork
         fooditems.add(320); //cooked pork
+        
+        
     }
 
     public void onEnable() {
@@ -82,6 +84,10 @@ public class Main extends JavaPlugin{
         pm.registerEvent(Event.Type.PLAYER_TELEPORT, listener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_QUIT, listener, Priority.Normal, this);
         pm.registerEvent(Event.Type.PLAYER_RESPAWN, listener, Priority.Monitor, this);
+        
+        getCommand("hunger").setExecutor(listener);
+        getCommand("thirst").setExecutor(listener);
+        
         File datadir = this.getDataFolder();
         if (!datadir.exists())
             datadir.mkdirs();
@@ -162,7 +168,7 @@ public class Main extends JavaPlugin{
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersHunger(this), 12000, 12000);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.InformPlayersThirst(this), 6000, 6000);
         getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Hurter(this, 200), 200, 200);
-        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Healer(this), 2000, 6000);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, new Jobs.Healer(this), 2000, 4000);
         System.out.println("HungerAndSuch enabled");
     }
     public void onDisable()

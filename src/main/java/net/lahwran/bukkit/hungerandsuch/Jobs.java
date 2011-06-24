@@ -95,7 +95,7 @@ public class Jobs {
                         p.damage(curhealthdrop-lasthealthdrop);
                         p.sendMessage("§bThe hunger hurts! find food!");
                     }
-                    System.out.println("Hunger for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
+                    //System.out.println("Hunger for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
                     plugin.lasthungers.put(p.getName(), curhealthdrop);
                 }
             }}
@@ -120,7 +120,7 @@ public class Jobs {
                         p.damage(curhealthdrop-lasthealthdrop);
                         p.sendMessage("§bThe thirst hurts! find water!");
                     }
-                    System.out.println("Thirst for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
+                    //System.out.println("Thirst for player "+p.getDisplayName()+": "+lasthealthdrop+", "+curhealthdrop+", "+curvalue);
                     plugin.lastthirsts.put(p.getName(), curhealthdrop);
                 }
             }}
@@ -141,8 +141,8 @@ public class Jobs {
                     float hunger = HungerTransforms.buildup(hungerv);
                     float thirst = ThirstTransforms.buildup(thirstv);
                     
-                    boolean toohungry = hunger >= 0.01190476;
-                    boolean toothirsty = thirst >= 0.083;
+                    boolean toohungry = hunger >= 0.0714285;
+                    boolean toothirsty = thirst >= 0.216;
                     int oldhealth = player.getHealth();
                     
                     if (plugin.goldendeaths.contains(player.getName()) || 
